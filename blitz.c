@@ -68,7 +68,7 @@
 
 
 /* logger3000 */
-char    logBuffer[10000];
+char    logBuffer[50000];
 size_t  logPosition = 0;
 int     isSelectTemplate = 0;
 
@@ -3354,6 +3354,15 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
 
     if (BLITZ_DEBUG) php_printf("*** FUNCTION *** blitz_exec_user_method: %s\n", node->lexem);
 
+    /* logger3000 */
+    doLog ("blitz_exec_user_method() start");
+    doLog ("tpl->static_data.body:");
+    doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    doLog ("result:");
+    doLogLen (*result, *result_len);
+    doLog ("");
+    /* !logger3000 */
+
     ZVAL_STRING(&zmethod, node->lexem);
     ZVAL_UNDEF(&retval);
 
@@ -4235,9 +4244,11 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
     blitz_node *node = NULL;
 
     /* logger3000 */
-    doLog ("blitz_exec_nodes_ex() start. result is empty");
+    doLog ("blitz_exec_nodes_ex() start");
     doLog ("tpl->static_data.body:");
     doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    doLog ("result:");
+    doLogLen (*result, *result_len);
     doLogLen ("", 0);
     /* !logger3000 */
 
@@ -4269,6 +4280,23 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
 
     node = first_child;
     while (node) {
+
+        /* logger3000 */
+        doLog ("blitz_exec_nodes_ex() parse node: ");
+        {
+            char sNode[1000] = {0};
+            strcpy (sNode, "  ");
+            strncpy (sNode + strlen (sNode),
+                        tpl->static_data.body + node->pos_begin,
+                        node->pos_end - node->pos_begin);
+            doLog (sNode);
+        }
+        doLog ("tpl->static_data.body:");
+        doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+        doLog ("result:");
+        doLogLen (*result, *result_len);
+        doLogLen ("", 0);
+        /* !logger3000 */
 
         if (BLITZ_DEBUG)
             php_printf("[EXEC] node:%s, pos = %ld, lc = %ld, next = %p\n", node->lexem, node->pos_begin, last_close, node->next);
