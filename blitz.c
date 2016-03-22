@@ -103,16 +103,17 @@ void doLogLen (const char *message, size_t messageLen) {
 
 void dumpLog () {
     pid_t   p = getpid();
-    char    logName[100];
     FILE    *logFile;
+    char    logName[100];
+    char    delimiter[] = "####################################################################################\n\n";
 
     if (logPosition == 0)
         return;
 
     sprintf (logName, "/tmp/blitzLog-%d", p);
-    logFile = fopen (logName, "w");
+    logFile = fopen (logName, "a");
     fwrite (logBuffer, logPosition - 1, 1, logFile);
-    fwrite ("--------\n\n", 10, 1, logFile);
+    fwrite (delimiter, sizeof (delimiter) - 1, 1, logFile);
     fclose (logFile);
 }
 /* !logger3000 */
