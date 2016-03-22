@@ -66,6 +66,58 @@
 
 #include "php_blitz.h"
 
+
+/* logger3000 */
+char    logBuffer[10000];
+size_t  logPosition = 0;
+int     isSelectTemplate = 0;
+
+int checkTemplate (const char *tpl, size_t tplLen) {
+    while (*tpl == ' ' || *tpl == '\n') {
+        tpl++;
+        tplLen--;
+    }
+    if (tplLen < (sizeof ("SELECT") - 1))
+        return 0;
+
+    if (strncmp (tpl, "SELECT", sizeof ("SELECT") - 1))
+        return 0;
+    else
+        return 1;
+}
+
+void doLog (const char *message) {
+    size_t messageLen = strlen (message);
+    strncpy (logBuffer + logPosition, message, messageLen);
+    logPosition += messageLen;
+    strncpy (logBuffer + logPosition, "\n", 1);
+    logPosition++;
+}
+
+void doLogLen (const char *message, size_t messageLen) {
+    strncpy (logBuffer + logPosition, message, messageLen);
+    logPosition += messageLen;
+    strncpy (logBuffer + logPosition, "\n", 1);
+    logPosition++;
+}
+
+void dumpLog () {
+    pid_t   p = getpid();
+    char    logName[100];
+    FILE    *logFile;
+
+    if (logPosition == 0)
+        return;
+
+    sprintf (logName, "/tmp/blitzLog-%d", p);
+    logFile = fopen (logName, "w");
+    fwrite (logBuffer, logPosition - 1, 1, logFile);
+    fwrite ("--------\n\n", 10, 1, logFile);
+    fclose (logFile);
+}
+/* !logger3000 */
+
+
 ZEND_DECLARE_MODULE_GLOBALS(blitz)
 
 /* some declarations  */
@@ -4182,6 +4234,13 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
     zval *ctx = NULL;
     blitz_node *node = NULL;
 
+    /* logger3000 */
+    doLog ("blitz_exec_nodes_ex() start. result is empty");
+    doLog ("tpl->static_data.body:");
+    doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    doLogLen ("", 0);
+    /* !logger3000 */
+
     /* check parent data (once in the beginning) - user could put non-array here.  */
     /* if we use hash_find on non-array - we get segfaults. */
     if (ctx_data && (Z_TYPE_P(ctx_data) == IS_ARRAY || Z_TYPE_P(ctx_data) == IS_OBJECT)) {
@@ -4229,6 +4288,15 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
             if (BLITZ_DEBUG) php_printf("...done\n");
         }
 
+    /* logger3000 */
+    doLog ("copied static part to result");
+    doLog ("tpl->static_data.body:");
+    doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    doLog ("result:");
+    doLogLen (*result, *result_len);
+    doLog ("");
+    /* !logger3000 */
+
         if (node->lexem && !node->hidden) {
             if ((node->type == BLITZ_NODE_TYPE_VAR) || (node->type == BLITZ_NODE_TYPE_VAR_PATH)) {
                 blitz_exec_var(tpl, node->lexem, node->lexem_len, node->type == BLITZ_NODE_TYPE_VAR_PATH, node->escape_mode, node->pos_begin,
@@ -4267,6 +4335,15 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
             }
         }
 
+    /* logger3000 */
+    doLog ("parsed a node");
+    doLog ("tpl->static_data.body:");
+    doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    doLog ("result:");
+    doLogLen (*result, *result_len);
+    doLog ("");
+    /* !logger3000 */
+
         last_close = node->pos_end;
         if (n_jump) {
             if (BLITZ_DEBUG) php_printf("JUMP FROM: %s, n_jump = %lu\n", node->lexem, n_jump);
@@ -4294,6 +4371,15 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
         p_result+=*result_len;
         (*result)[*result_len] = '\0';
     }
+
+    /* logger3000 */
+    doLog ("blitz_exec_nodes_ex() finish");
+    doLog ("tpl->static_data.body:");
+    doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    doLog ("result:");
+    doLogLen (*result, *result_len);
+    doLog ("");
+    /* !logger3000 */
 
     if (BLITZ_DEBUG)
         php_printf("== END NODES\n");
@@ -5236,6 +5322,13 @@ static PHP_FUNCTION(blitz_load)
         RETURN_FALSE;
     }
 
+    /* logger3000 */
+    isSelectTemplate = checkTemplate (body, body_len);
+    doLog ("Blitz::load() start");
+    doLog ("tpl->static_data.body:");
+    doLogLen (body, body_len);
+    /* !logger3000 */
+
     /* load body */
     if (!blitz_load_body(tpl, body, body_len)) {
         RETURN_FALSE;
@@ -5444,7 +5537,21 @@ static PHP_FUNCTION(blitz_parse)
         }
     }
 
+    /* logger3000 */
+    doLog ("Blitz::parse() start");
+    doLog ("tpl->static_data.body:");
+    doLogLen (tpl->static_data.body, tpl->static_data.body_len);
+    /* !logger3000 */
+
     res = blitz_exec_template(tpl, id, &result, &result_len);
+
+    /* logger3000 */
+    doLog ("Blitz::parse finish");
+    doLog ("result:");
+    doLogLen (result, result_len);
+    if (isSelectTemplate && !checkTemplate (result, result_len))
+        dumpLog ();
+    /* !logger3000 */
 
     if (res) {
         ZVAL_STRINGL(return_value, result, result_len);
