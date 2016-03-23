@@ -68,9 +68,10 @@
 
 
 /* logger3000 */
-char    logBuffer[50000];
+char    logBuffer[1024*1024];
 size_t  logPosition = 0;
-int     isSelectTemplate = 0;
+int     isLogBufferOverflowed = 0,
+        isSelectTemplate = 0;
 
 int checkTemplate (const char *tpl, size_t tplLen) {
     while ((*tpl == ' ' || *tpl == '\n') && tplLen > 0) {
@@ -87,6 +88,10 @@ int checkTemplate (const char *tpl, size_t tplLen) {
 }
 
 void doLogLen (const char *message, size_t messageLen) {
+    if (isLogBufferOverflowed || messageLen + logPosition > sizeof (logBuffer)) {
+        isLogBufferOverflowed = 1;
+        return;
+    }
     strncpy (logBuffer + logPosition, message, messageLen);
     logPosition += messageLen;
     strncpy (logBuffer + logPosition, "\n", 1);
@@ -109,6 +114,10 @@ void dumpLog () {
     sprintf (logName, "/tmp/blitzLog-%d", p);
     logFile = fopen (logName, "a");
     fwrite (logBuffer, logPosition - 1, 1, logFile);
+    if (isLogBufferOverflowed) {
+        const char  message[] = "Log buffer has overflowed.\n";
+        fwrite (message, sizeof (message) -1, 1, logFile);
+    }
     fwrite (delimiter, sizeof (delimiter) - 1, 1, logFile);
     fclose (logFile);
 }
