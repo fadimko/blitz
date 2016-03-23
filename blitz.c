@@ -73,7 +73,7 @@ size_t  logPosition = 0;
 int     isSelectTemplate = 0;
 
 int checkTemplate (const char *tpl, size_t tplLen) {
-    while (*tpl == ' ' || *tpl == '\n') {
+    while ((*tpl == ' ' || *tpl == '\n') && tplLen > 0) {
         tpl++;
         tplLen--;
     }
@@ -86,14 +86,6 @@ int checkTemplate (const char *tpl, size_t tplLen) {
         return 1;
 }
 
-void doLog (const char *message) {
-    size_t messageLen = strlen (message);
-    strncpy (logBuffer + logPosition, message, messageLen);
-    logPosition += messageLen;
-    strncpy (logBuffer + logPosition, "\n", 1);
-    logPosition++;
-}
-
 void doLogLen (const char *message, size_t messageLen) {
     strncpy (logBuffer + logPosition, message, messageLen);
     logPosition += messageLen;
@@ -101,11 +93,15 @@ void doLogLen (const char *message, size_t messageLen) {
     logPosition++;
 }
 
+void doLog (const char *message) {
+    doLogLen (message, strlen (message));
+}
+
 void dumpLog () {
-    pid_t   p = getpid();
-    FILE    *logFile;
-    char    logName[100];
-    char    delimiter[] = "####################################################################################\n\n";
+    pid_t       p = getpid();
+    FILE        *logFile;
+    char        logName[100];
+    const char  delimiter[] = "####################################################################################\n\n";
 
     if (logPosition == 0)
         return;
@@ -3360,7 +3356,7 @@ static inline int blitz_exec_user_method(blitz_tpl *tpl, blitz_node *node, zval 
     doLogLen (tpl->static_data.body, tpl->static_data.body_len);
     doLog ("result:");
     doLogLen (*result, *result_len);
-    doLog ("");
+    doLogLen ("", 0);
     /* !logger3000 */
 
     ZVAL_STRING(&zmethod, node->lexem);
@@ -4283,14 +4279,8 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
 
         /* logger3000 */
         doLog ("blitz_exec_nodes_ex() parse node: ");
-        {
-            char sNode[1000] = {0};
-            strcpy (sNode, "  ");
-            strncpy (sNode + strlen (sNode),
-                        tpl->static_data.body + node->pos_begin,
+        doLogLen (tpl->static_data.body + node->pos_begin,
                         node->pos_end - node->pos_begin);
-            doLog (sNode);
-        }
         doLog ("tpl->static_data.body:");
         doLogLen (tpl->static_data.body, tpl->static_data.body_len);
         doLog ("result:");
@@ -4322,7 +4312,7 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
     doLogLen (tpl->static_data.body, tpl->static_data.body_len);
     doLog ("result:");
     doLogLen (*result, *result_len);
-    doLog ("");
+    doLogLen ("", 0);
     /* !logger3000 */
 
         if (node->lexem && !node->hidden) {
@@ -4369,7 +4359,7 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
     doLogLen (tpl->static_data.body, tpl->static_data.body_len);
     doLog ("result:");
     doLogLen (*result, *result_len);
-    doLog ("");
+    doLogLen ("", 0);
     /* !logger3000 */
 
         last_close = node->pos_end;
@@ -4406,7 +4396,7 @@ static int blitz_exec_nodes_ex(blitz_tpl *tpl, blitz_node *first_child,
     doLogLen (tpl->static_data.body, tpl->static_data.body_len);
     doLog ("result:");
     doLogLen (*result, *result_len);
-    doLog ("");
+    doLogLen ("", 0);
     /* !logger3000 */
 
     if (BLITZ_DEBUG)
